@@ -1,6 +1,6 @@
 {
   "name": "note-review",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Obsidian plugin to grade Zotero-synced research notes with Claude",
   "main": "main.js",
   "scripts": {

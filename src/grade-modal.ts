@@ -48,7 +48,7 @@ export class GradeModal extends Modal {
 		const retryBtn = btnRow.createEl("button", { text: "Retry — open in Zotero" });
 		retryBtn.addEventListener("click", async () => {
 			this.close();
-			await this.zoteroService.openInZotero(this.note.itemKey);
+			await this.zoteroService.openInZotero(this.note.zoteroItemKey || this.note.itemKey);
 		});
 
 		const notesBtn = btnRow.createEl("button", {

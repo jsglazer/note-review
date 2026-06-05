@@ -76,7 +76,7 @@ export const DEFAULT_SETTINGS: NoteReviewSettings = {
 	venvPath: "",
 	useOcr: true,
 
-	zoteroKeyField: "$itemKey",
+	zoteroKeyField: "CitationKey",
 
 	noteSections: "Core Claims, Methodology, Counter Arguments, General Notes, References",
 	claudeNoteFormat: `### Summary
@@ -489,9 +489,9 @@ export class NoteReviewSettingTab extends PluginSettingTab {
 		containerEl.createEl("h3", { text: "Zotero" });
 
 		new Setting(containerEl)
-			.setName("Zotero item key field")
+			.setName("Zotero citation key field")
 			.setDesc(
-				"Frontmatter field holding the Zotero item key (written by better-notes as $itemKey)."
+				"Frontmatter field holding the BBT citation key (written by better-notes as CitationKey). Used to look up PDFs and open items in Zotero."
 			)
 			.addText((text) =>
 				text

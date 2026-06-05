@@ -1,7 +1,8 @@
 import { App, TFile } from "obsidian";
 
 export interface ParsedNote {
-	itemKey: string;
+	itemKey: string;       // BBT citation key — used for BBT RPC calls
+	zoteroItemKey: string; // Raw Zotero item key — used for zotero:// URLs
 	libraryId: string;
 	sections: Record<string, string>;
 	sectionNames: string[];
@@ -38,12 +39,13 @@ export class NoteParser {
 				`Frontmatter field "${zoteroKeyField}" is missing or empty. Is this note synced from Zotero?`
 			);
 		}
-		const libraryId = String(frontmatter["$libraryID"] ?? "").trim();
+		const zoteroItemKey = String(frontmatter["itemKey"] ?? frontmatter["$itemKey"] ?? "").trim();
+		const libraryId = String(frontmatter["libraryID"] ?? frontmatter["$libraryID"] ?? "").trim();
 
 		const body = this.stripFrontmatter(raw);
 		const sections = this.extractSections(body, sectionNames);
 
-		return { itemKey, libraryId, sections, sectionNames, fullBody: body, raw };
+		return { itemKey, zoteroItemKey, libraryId, sections, sectionNames, fullBody: body, raw };
 	}
 
 	private stripFrontmatter(raw: string): string {

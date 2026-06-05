@@ -1,6 +1,6 @@
 export class ZoteroService {
-	async openInZotero(itemKey: string): Promise<void> {
-		const uri = `zotero://select/library/items/${itemKey}`;
+	async openInZotero(zoteroItemKey: string): Promise<void> {
+		const uri = `zotero://select/library/items/${zoteroItemKey}`;
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const electron = (window as any).require?.("electron");
 		if (electron?.shell) {

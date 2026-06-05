@@ -119,7 +119,7 @@ export default class NoteReviewPlugin extends Plugin {
 					noteAppender
 				).open();
 			} else {
-				new FailModal(this.app, result, note.itemKey, zoteroSvc).open();
+				new FailModal(this.app, result, note.zoteroItemKey || note.itemKey, zoteroSvc).open();
 			}
 		} catch (e) {
 			notice.hide();

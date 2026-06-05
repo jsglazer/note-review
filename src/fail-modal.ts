@@ -6,7 +6,7 @@ export class FailModal extends Modal {
 	constructor(
 		app: App,
 		private result: GradeResult,
-		private itemKey: string,
+		private zoteroItemKey: string,
 		private zoteroService: ZoteroService
 	) {
 		super(app);
@@ -47,7 +47,7 @@ export class FailModal extends Modal {
 		});
 		okBtn.addEventListener("click", async () => {
 			this.close();
-			await this.zoteroService.openInZotero(this.itemKey);
+			await this.zoteroService.openInZotero(this.zoteroItemKey);
 		});
 	}
 
