@@ -35,6 +35,11 @@ export default class NoteReviewPlugin extends Plugin {
 
 	async loadSettings(): Promise<void> {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		// Migrate old default field name to current default
+		if (this.settings.zoteroKeyField === "$itemKey") {
+			this.settings.zoteroKeyField = "CitationKey";
+			await this.saveSettings();
+		}
 	}
 
 	async saveSettings(): Promise<void> {
