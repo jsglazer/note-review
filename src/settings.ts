@@ -1,4 +1,6 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
+import { access } from "fs/promises";
+import { join } from "path";
 import type NoteReviewPlugin from "./main";
 
 export type GradingMode = "note-only" | "pdf-assisted";
@@ -54,6 +56,44 @@ export const DEFAULT_SETTINGS: NoteReviewSettings = {
 {{references}}`,
 };
 
+async function pathExists(p: string): Promise<boolean> {
+	if (!p.trim()) return false;
+	try {
+		await access(p.trim());
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+function setIndicator(
+	dot: HTMLElement,
+	state: "unchecked" | "valid" | "invalid",
+	tooltip: string
+): void {
+	dot.removeClass("note-review-dot-unchecked", "note-review-dot-valid", "note-review-dot-invalid");
+	dot.addClass(`note-review-dot-${state}`);
+	dot.setAttribute("title", tooltip);
+}
+
+function addDot(controlEl: HTMLElement): HTMLElement {
+	return controlEl.createEl("span", {
+		cls: "note-review-path-dot note-review-dot-unchecked",
+		attr: { title: "Waiting for input…" },
+	});
+}
+
+function debounce<T extends unknown[]>(
+	fn: (...args: T) => void,
+	ms: number
+): (...args: T) => void {
+	let timer: ReturnType<typeof setTimeout>;
+	return (...args: T) => {
+		clearTimeout(timer);
+		timer = setTimeout(() => fn(...args), ms);
+	};
+}
+
 export class NoteReviewSettingTab extends PluginSettingTab {
 	plugin: NoteReviewPlugin;
 
@@ -67,6 +107,8 @@ export class NoteReviewSettingTab extends PluginSettingTab {
 		containerEl.empty();
 
 		containerEl.createEl("h2", { text: "Note Review Settings" });
+
+		// ── API & model ───────────────────────────────────────────────────
 
 		new Setting(containerEl)
 			.setName("Anthropic API key")
@@ -97,6 +139,8 @@ export class NoteReviewSettingTab extends PluginSettingTab {
 					})
 			);
 
+		// ── Grading ───────────────────────────────────────────────────────
+
 		new Setting(containerEl)
 			.setName("Grade threshold")
 			.setDesc(
@@ -115,7 +159,9 @@ export class NoteReviewSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Grading mode")
-			.setDesc("Note-only uses your notes text. PDF-assisted also reads the source PDF.")
+			.setDesc(
+				"Note-only uses your notes text only. PDF-assisted also reads the source PDF."
+			)
 			.addDropdown((drop) =>
 				drop
 					.addOption("note-only", "Note-only")
@@ -127,24 +173,55 @@ export class NoteReviewSettingTab extends PluginSettingTab {
 					})
 			);
 
+		// ── PDF extraction ────────────────────────────────────────────────
+
 		containerEl.createEl("h3", { text: "PDF extraction (v1.1.0)" });
 
-		new Setting(containerEl)
+		// Script path with live validator dot
+		let scriptDot: HTMLElement;
+		const scriptSetting = new Setting(containerEl)
 			.setName("PDF extraction script path")
 			.setDesc(
 				"Absolute path to pdf_to_markdown.py. Required for PDF-assisted mode."
 			)
-			.addText((text) =>
+			.addText((text) => {
+				const checkScript = debounce(async (val: string) => {
+					const exists = await pathExists(val);
+					setIndicator(
+						scriptDot,
+						val ? (exists ? "valid" : "invalid") : "unchecked",
+						val
+							? exists
+								? "Script found ✓"
+								: "File not found ✗"
+							: "No path entered"
+					);
+				}, 500);
+
 				text
 					.setPlaceholder("/Users/you/Dev/pdf_to_markdown.py")
 					.setValue(this.plugin.settings.pdfScriptPath)
 					.onChange(async (value) => {
 						this.plugin.settings.pdfScriptPath = value.trim();
 						await this.plugin.saveSettings();
-					})
-			);
+						checkScript(value.trim());
+					});
+			});
 
-		const venvToggleSetting = new Setting(containerEl)
+		scriptDot = addDot(scriptSetting.controlEl);
+		// Validate on open
+		if (this.plugin.settings.pdfScriptPath) {
+			pathExists(this.plugin.settings.pdfScriptPath).then((exists) =>
+				setIndicator(
+					scriptDot,
+					exists ? "valid" : "invalid",
+					exists ? "Script found ✓" : "File not found ✗"
+				)
+			);
+		}
+
+		// venv toggle
+		const venvToggle = new Setting(containerEl)
 			.setName("Use Python virtual environment")
 			.setDesc("Use a venv's Python instead of the system python3.")
 			.addToggle((toggle) =>
@@ -156,24 +233,55 @@ export class NoteReviewSettingTab extends PluginSettingTab {
 						venvPathSetting.settingEl.style.display = value ? "" : "none";
 					})
 			);
+		void venvToggle; // referenced only for side-effects
 
+		// venv path with live validator dot
+		let venvDot: HTMLElement;
 		const venvPathSetting = new Setting(containerEl)
 			.setName("venv path")
 			.setDesc(
-				"Root of the virtual environment, e.g. /Users/you/Dev/.venv. Claude will use <venv>/bin/python3."
+				"Root of the virtual environment, e.g. /Users/you/Dev/.venv. Checks that <venv>/bin/python3 exists."
 			)
-			.addText((text) =>
+			.addText((text) => {
+				const checkVenv = debounce(async (val: string) => {
+					const python = val ? join(val, "bin", "python3") : "";
+					const exists = await pathExists(python);
+					setIndicator(
+						venvDot,
+						val ? (exists ? "valid" : "invalid") : "unchecked",
+						val
+							? exists
+								? `${python} found ✓`
+								: `${python} not found ✗`
+							: "No path entered"
+					);
+				}, 500);
+
 				text
 					.setPlaceholder("/Users/you/Dev/.venv")
 					.setValue(this.plugin.settings.venvPath)
 					.onChange(async (value) => {
 						this.plugin.settings.venvPath = value.trim();
 						await this.plugin.saveSettings();
-					})
-			);
+						checkVenv(value.trim());
+					});
+			});
+
+		venvDot = addDot(venvPathSetting.controlEl);
 		venvPathSetting.settingEl.style.display = this.plugin.settings.useVenv
 			? ""
 			: "none";
+		// Validate on open
+		if (this.plugin.settings.useVenv && this.plugin.settings.venvPath) {
+			const python = join(this.plugin.settings.venvPath, "bin", "python3");
+			pathExists(python).then((exists) =>
+				setIndicator(
+					venvDot,
+					exists ? "valid" : "invalid",
+					exists ? `${python} found ✓` : `${python} not found ✗`
+				)
+			);
+		}
 
 		new Setting(containerEl)
 			.setName("Use OCR")
@@ -188,6 +296,8 @@ export class NoteReviewSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					})
 			);
+
+		// ── Zotero ────────────────────────────────────────────────────────
 
 		containerEl.createEl("h3", { text: "Zotero" });
 
@@ -205,6 +315,8 @@ export class NoteReviewSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					})
 			);
+
+		// ── Note sections ─────────────────────────────────────────────────
 
 		containerEl.createEl("h3", { text: "Note sections" });
 
@@ -226,12 +338,14 @@ export class NoteReviewSettingTab extends PluginSettingTab {
 					})
 			);
 
+		// ── Claude Notes format ───────────────────────────────────────────
+
 		containerEl.createEl("h3", { text: "Claude Notes format" });
 
 		new Setting(containerEl)
 			.setName("Claude-note template")
 			.setDesc(
-				"Template for the # Claude Notes section. Use placeholders: {{summary}}, {{core_claims}}, {{methodology}}, {{counter_arguments}}, {{general_notes}}, {{references}}."
+				"Template for the # Claude Notes section. Placeholders are generated from your section names (e.g. Core Claims → {{core_claims}})."
 			)
 			.addTextArea((area) =>
 				area

@@ -55,3 +55,20 @@
   flex: 1 1 auto;
   min-width: 120px;
 }
+
+/* Path validator dots in settings */
+.note-review-path-dot {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-left: 8px;
+  flex-shrink: 0;
+  vertical-align: middle;
+  cursor: default;
+  transition: background-color 0.2s ease;
+}
+
+.note-review-dot-unchecked { background-color: var(--text-faint); }
+.note-review-dot-valid     { background-color: var(--color-green); }
+.note-review-dot-invalid   { background-color: var(--color-red); }
