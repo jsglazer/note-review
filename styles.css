@@ -1,0 +1,57 @@
+.note-review-modal {
+  padding: 1rem;
+  max-width: 560px;
+}
+
+.note-review-score {
+  text-align: center;
+  padding: 1rem 0 0.5rem;
+}
+
+.note-review-score-number {
+  font-size: 3rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.note-review-score.pass .note-review-score-number {
+  color: var(--color-green);
+}
+
+.note-review-score.fail .note-review-score-number {
+  color: var(--color-red);
+}
+
+.note-review-fail-heading {
+  text-align: center;
+  margin: 0.5rem 0 1rem;
+  color: var(--color-red);
+}
+
+.note-review-subscores {
+  text-align: center;
+  margin-bottom: 0.75rem;
+}
+
+.note-review-subscores-text {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.note-review-feedback {
+  margin: 0.5rem 0 1.25rem;
+  line-height: 1.5;
+}
+
+.note-review-btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-top: 0.5rem;
+}
+
+.note-review-btn-row button {
+  flex: 1 1 auto;
+  min-width: 120px;
+}

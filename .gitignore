@@ -1,0 +1,7 @@
+.DS_Store
+ToDo.md
+ClaudeStatus.md
+node_modules/
+main.js
+*.js.map
+.venv/
