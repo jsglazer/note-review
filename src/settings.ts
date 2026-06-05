@@ -4,17 +4,43 @@ import { join } from "path";
 import type NoteReviewPlugin from "./main";
 
 export type GradingMode = "note-only" | "pdf-assisted";
+export type LLMProvider = "anthropic" | "openai" | "openai-compatible" | "gemini";
 
 export interface NoteReviewSettings {
+	// Provider selection
+	llmProvider: LLMProvider;
+
+	// Anthropic / Claude
 	anthropicApiKey: string;
 	claudeModel: string;
+
+	// OpenAI
+	openaiApiKey: string;
+	openaiModel: string;
+
+	// OpenAI-compatible (Ollama, LM Studio, etc.)
+	openaiCompatibleBaseUrl: string;
+	openaiCompatibleApiKey: string;
+	openaiCompatibleModel: string;
+
+	// Gemini
+	geminiApiKey: string;
+	geminiModel: string;
+
+	// Grading
 	gradeThreshold: number;
 	gradingMode: GradingMode;
+
+	// PDF extraction
 	pdfScriptPath: string;
 	useVenv: boolean;
 	venvPath: string;
 	useOcr: boolean;
+
+	// Zotero
 	zoteroKeyField: string;
+
+	// Note structure
 	noteSections: string;
 	claudeNoteFormat: string;
 }
@@ -27,15 +53,31 @@ export function parseSections(settings: NoteReviewSettings): string[] {
 }
 
 export const DEFAULT_SETTINGS: NoteReviewSettings = {
+	llmProvider: "anthropic",
+
 	anthropicApiKey: "",
 	claudeModel: "claude-sonnet-4-6",
+
+	openaiApiKey: "",
+	openaiModel: "gpt-4o",
+
+	openaiCompatibleBaseUrl: "",
+	openaiCompatibleApiKey: "",
+	openaiCompatibleModel: "",
+
+	geminiApiKey: "",
+	geminiModel: "gemini-2.0-flash",
+
 	gradeThreshold: 75,
 	gradingMode: "note-only",
+
 	pdfScriptPath: "",
 	useVenv: false,
 	venvPath: "",
 	useOcr: true,
+
 	zoteroKeyField: "$itemKey",
+
 	noteSections: "Core Claims, Methodology, Counter Arguments, General Notes, References",
 	claudeNoteFormat: `### Summary
 {{summary}}
@@ -108,11 +150,34 @@ export class NoteReviewSettingTab extends PluginSettingTab {
 
 		containerEl.createEl("h2", { text: "Note Review Settings" });
 
-		// ── API & model ───────────────────────────────────────────────────
+		// ── Provider selection ────────────────────────────────────────────
+
+		containerEl.createEl("h3", { text: "AI Provider" });
 
 		new Setting(containerEl)
+			.setName("Provider")
+			.setDesc("Which AI service to use for grading and analysis.")
+			.addDropdown((drop) =>
+				drop
+					.addOption("anthropic", "Claude (Anthropic)")
+					.addOption("openai", "OpenAI")
+					.addOption("openai-compatible", "OpenAI-compatible (Ollama, LM Studio…)")
+					.addOption("gemini", "Google Gemini")
+					.setValue(this.plugin.settings.llmProvider)
+					.onChange(async (value) => {
+						this.plugin.settings.llmProvider = value as LLMProvider;
+						await this.plugin.saveSettings();
+						showProviderSections(value as LLMProvider);
+					})
+			);
+
+		// ── Anthropic settings ────────────────────────────────────────────
+
+		const anthropicHeader = containerEl.createEl("h3", { text: "Anthropic" });
+
+		const anthropicKey = new Setting(containerEl)
 			.setName("Anthropic API key")
-			.setDesc("Your Anthropic API key for Claude.")
+			.setDesc("Your Anthropic API key.")
 			.addText((text) =>
 				text
 					.setPlaceholder("sk-ant-...")
@@ -124,9 +189,9 @@ export class NoteReviewSettingTab extends PluginSettingTab {
 					.inputEl.setAttribute("type", "password")
 			);
 
-		new Setting(containerEl)
+		const anthropicModel = new Setting(containerEl)
 			.setName("Claude model")
-			.setDesc("Which Claude model to use for grading and analysis.")
+			.setDesc("Which Claude model to use.")
 			.addDropdown((drop) =>
 				drop
 					.addOption("claude-sonnet-4-6", "Claude Sonnet 4.6")
@@ -139,7 +204,136 @@ export class NoteReviewSettingTab extends PluginSettingTab {
 					})
 			);
 
+		// ── OpenAI settings ───────────────────────────────────────────────
+
+		const openaiHeader = containerEl.createEl("h3", { text: "OpenAI" });
+
+		const openaiKey = new Setting(containerEl)
+			.setName("OpenAI API key")
+			.setDesc("Your OpenAI API key.")
+			.addText((text) =>
+				text
+					.setPlaceholder("sk-...")
+					.setValue(this.plugin.settings.openaiApiKey)
+					.onChange(async (value) => {
+						this.plugin.settings.openaiApiKey = value.trim();
+						await this.plugin.saveSettings();
+					})
+					.inputEl.setAttribute("type", "password")
+			);
+
+		const openaiModel = new Setting(containerEl)
+			.setName("OpenAI model")
+			.setDesc("Which OpenAI model to use.")
+			.addDropdown((drop) =>
+				drop
+					.addOption("gpt-4o", "GPT-4o")
+					.addOption("gpt-4o-mini", "GPT-4o mini")
+					.addOption("gpt-4-turbo", "GPT-4 Turbo")
+					.addOption("gpt-3.5-turbo", "GPT-3.5 Turbo")
+					.setValue(this.plugin.settings.openaiModel)
+					.onChange(async (value) => {
+						this.plugin.settings.openaiModel = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		// ── OpenAI-compatible settings ────────────────────────────────────
+
+		const compatHeader = containerEl.createEl("h3", { text: "OpenAI-compatible (local LLM)" });
+
+		const compatUrl = new Setting(containerEl)
+			.setName("Base URL")
+			.setDesc("API base URL. Ollama default: http://localhost:11434/v1  |  LM Studio: http://localhost:1234/v1")
+			.addText((text) =>
+				text
+					.setPlaceholder("http://localhost:11434/v1")
+					.setValue(this.plugin.settings.openaiCompatibleBaseUrl)
+					.onChange(async (value) => {
+						this.plugin.settings.openaiCompatibleBaseUrl = value.trim();
+						await this.plugin.saveSettings();
+					})
+			);
+
+		const compatKey = new Setting(containerEl)
+			.setName("API key (optional)")
+			.setDesc("Leave blank for local servers that don't require authentication.")
+			.addText((text) =>
+				text
+					.setPlaceholder("(leave blank for Ollama / LM Studio)")
+					.setValue(this.plugin.settings.openaiCompatibleApiKey)
+					.onChange(async (value) => {
+						this.plugin.settings.openaiCompatibleApiKey = value.trim();
+						await this.plugin.saveSettings();
+					})
+					.inputEl.setAttribute("type", "password")
+			);
+
+		const compatModel = new Setting(containerEl)
+			.setName("Model name")
+			.setDesc("Exact model name as served by the endpoint, e.g. llama3.2 or mistral.")
+			.addText((text) =>
+				text
+					.setPlaceholder("llama3.2")
+					.setValue(this.plugin.settings.openaiCompatibleModel)
+					.onChange(async (value) => {
+						this.plugin.settings.openaiCompatibleModel = value.trim();
+						await this.plugin.saveSettings();
+					})
+			);
+
+		// ── Gemini settings ───────────────────────────────────────────────
+
+		const geminiHeader = containerEl.createEl("h3", { text: "Google Gemini" });
+
+		const geminiKey = new Setting(containerEl)
+			.setName("Gemini API key")
+			.setDesc("Your Google AI Studio API key.")
+			.addText((text) =>
+				text
+					.setPlaceholder("AIza...")
+					.setValue(this.plugin.settings.geminiApiKey)
+					.onChange(async (value) => {
+						this.plugin.settings.geminiApiKey = value.trim();
+						await this.plugin.saveSettings();
+					})
+					.inputEl.setAttribute("type", "password")
+			);
+
+		const geminiModel = new Setting(containerEl)
+			.setName("Gemini model")
+			.setDesc("Which Gemini model to use.")
+			.addDropdown((drop) =>
+				drop
+					.addOption("gemini-2.0-flash", "Gemini 2.0 Flash")
+					.addOption("gemini-1.5-pro", "Gemini 1.5 Pro")
+					.addOption("gemini-1.5-flash", "Gemini 1.5 Flash")
+					.setValue(this.plugin.settings.geminiModel)
+					.onChange(async (value) => {
+						this.plugin.settings.geminiModel = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		// ── Show/hide provider sections ───────────────────────────────────
+
+		const anthropicEls = [anthropicHeader, anthropicKey.settingEl, anthropicModel.settingEl];
+		const openaiEls = [openaiHeader, openaiKey.settingEl, openaiModel.settingEl];
+		const compatEls = [compatHeader, compatUrl.settingEl, compatKey.settingEl, compatModel.settingEl];
+		const geminiEls = [geminiHeader, geminiKey.settingEl, geminiModel.settingEl];
+
+		function showProviderSections(provider: LLMProvider): void {
+			for (const el of anthropicEls) el.style.display = provider === "anthropic" ? "" : "none";
+			for (const el of openaiEls) el.style.display = provider === "openai" ? "" : "none";
+			for (const el of compatEls) el.style.display = provider === "openai-compatible" ? "" : "none";
+			for (const el of geminiEls) el.style.display = provider === "gemini" ? "" : "none";
+		}
+
+		showProviderSections(this.plugin.settings.llmProvider);
+
 		// ── Grading ───────────────────────────────────────────────────────
+
+		containerEl.createEl("h3", { text: "Grading" });
 
 		new Setting(containerEl)
 			.setName("Grade threshold")
@@ -175,9 +369,8 @@ export class NoteReviewSettingTab extends PluginSettingTab {
 
 		// ── PDF extraction ────────────────────────────────────────────────
 
-		containerEl.createEl("h3", { text: "PDF extraction (v1.1.0)" });
+		containerEl.createEl("h3", { text: "PDF extraction" });
 
-		// Script path with live validator dot
 		let scriptDot: HTMLElement;
 		const scriptSetting = new Setting(containerEl)
 			.setName("PDF extraction script path")
@@ -209,7 +402,6 @@ export class NoteReviewSettingTab extends PluginSettingTab {
 			});
 
 		scriptDot = addDot(scriptSetting.controlEl);
-		// Validate on open
 		if (this.plugin.settings.pdfScriptPath) {
 			pathExists(this.plugin.settings.pdfScriptPath).then((exists) =>
 				setIndicator(
@@ -220,7 +412,6 @@ export class NoteReviewSettingTab extends PluginSettingTab {
 			);
 		}
 
-		// venv toggle
 		const venvToggle = new Setting(containerEl)
 			.setName("Use Python virtual environment")
 			.setDesc("Use a venv's Python instead of the system python3.")
@@ -233,9 +424,8 @@ export class NoteReviewSettingTab extends PluginSettingTab {
 						venvPathSetting.settingEl.style.display = value ? "" : "none";
 					})
 			);
-		void venvToggle; // referenced only for side-effects
+		void venvToggle;
 
-		// venv path with live validator dot
 		let venvDot: HTMLElement;
 		const venvPathSetting = new Setting(containerEl)
 			.setName("venv path")
@@ -268,10 +458,7 @@ export class NoteReviewSettingTab extends PluginSettingTab {
 			});
 
 		venvDot = addDot(venvPathSetting.controlEl);
-		venvPathSetting.settingEl.style.display = this.plugin.settings.useVenv
-			? ""
-			: "none";
-		// Validate on open
+		venvPathSetting.settingEl.style.display = this.plugin.settings.useVenv ? "" : "none";
 		if (this.plugin.settings.useVenv && this.plugin.settings.venvPath) {
 			const python = join(this.plugin.settings.venvPath, "bin", "python3");
 			pathExists(python).then((exists) =>
@@ -323,7 +510,7 @@ export class NoteReviewSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Note sections")
 			.setDesc(
-				"Comma-separated list of section headings the plugin expects in your notes. Edit this to match your own note format."
+				"Comma-separated list of section headings the plugin expects in your notes."
 			)
 			.addTextArea((area) =>
 				area
@@ -338,12 +525,12 @@ export class NoteReviewSettingTab extends PluginSettingTab {
 					})
 			);
 
-		// ── Claude Notes format ───────────────────────────────────────────
+		// ── AI Notes format ───────────────────────────────────────────────
 
-		containerEl.createEl("h3", { text: "Claude Notes format" });
+		containerEl.createEl("h3", { text: "AI Notes format" });
 
 		new Setting(containerEl)
-			.setName("Claude-note template")
+			.setName("AI note template")
 			.setDesc(
 				"Template for the # Claude Notes section. Placeholders are generated from your section names (e.g. Core Claims → {{core_claims}})."
 			)

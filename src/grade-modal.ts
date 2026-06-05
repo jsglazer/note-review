@@ -1,6 +1,5 @@
 import { App, Modal, Notice } from "obsidian";
-import type { GradeResult } from "./claude-service";
-import type { ClaudeService } from "./claude-service";
+import type { GradeResult, LLMService } from "./llm-service";
 import type { ParsedNote } from "./note-parser";
 import type { ZoteroService } from "./zotero-service";
 import type { NoteAppender } from "./note-appender";
@@ -12,7 +11,7 @@ export class GradeModal extends Modal {
 		private result: GradeResult,
 		private note: ParsedNote,
 		private pdfText: string | undefined,
-		private claudeService: ClaudeService,
+		private claudeService: LLMService,
 		private zoteroService: ZoteroService,
 		private noteAppender: NoteAppender
 	) {
@@ -53,7 +52,7 @@ export class GradeModal extends Modal {
 		});
 
 		const notesBtn = btnRow.createEl("button", {
-			text: "Claude Notes",
+			text: "AI Notes",
 			cls: "mod-cta",
 		});
 		notesBtn.addEventListener("click", async () => {
@@ -61,17 +60,17 @@ export class GradeModal extends Modal {
 			notesBtn.textContent = "Writing…";
 			try {
 				await this.appendClaudeNotes();
-				new Notice("Claude Notes appended.");
+				new Notice("AI Notes appended.");
 				this.close();
 			} catch (e) {
 				new Notice(`Error: ${(e as Error).message}`);
 				notesBtn.disabled = false;
-				notesBtn.textContent = "Claude Notes";
+				notesBtn.textContent = "AI Notes";
 			}
 		});
 
 		const reviewBtn = btnRow.createEl("button", {
-			text: "Claude Review",
+			text: "AI Review",
 			cls: "mod-cta",
 		});
 		reviewBtn.addEventListener("click", async () => {
@@ -79,18 +78,18 @@ export class GradeModal extends Modal {
 			reviewBtn.textContent = "Writing…";
 			try {
 				await this.appendClaudeReview();
-				new Notice("Claude Review appended.");
+				new Notice("AI Review appended.");
 				this.close();
 			} catch (e) {
 				new Notice(`Error: ${(e as Error).message}`);
 				reviewBtn.disabled = false;
-				reviewBtn.textContent = "Claude Review";
+				reviewBtn.textContent = "AI Review";
 			}
 		});
 	}
 
 	private async appendClaudeNotes(): Promise<void> {
-		const analysis = await this.claudeService.generateClaudeNotes(
+		const analysis = await this.claudeService.generateNotes(
 			this.note,
 			this.pdfText
 		);

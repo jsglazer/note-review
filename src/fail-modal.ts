@@ -1,5 +1,5 @@
 import { App, Modal } from "obsidian";
-import type { GradeResult } from "./claude-service";
+import type { GradeResult } from "./llm-service";
 import type { ZoteroService } from "./zotero-service";
 
 export class FailModal extends Modal {

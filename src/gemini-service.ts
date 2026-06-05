@@ -1,4 +1,3 @@
-import Anthropic from "@anthropic-ai/sdk";
 import type { NoteReviewSettings } from "./settings";
 import type { ParsedNote } from "./note-parser";
 import type { GradeResult, LLMAnalysis, CorrectionsResult } from "./llm-service";
@@ -11,12 +10,8 @@ import {
 	parseCorrections,
 } from "./llm-prompts";
 
-export class ClaudeService {
-	private client: Anthropic;
-
-	constructor(private settings: NoteReviewSettings) {
-		this.client = new Anthropic({ apiKey: settings.anthropicApiKey });
-	}
+export class GeminiService {
+	constructor(private settings: NoteReviewSettings) {}
 
 	async gradeNote(note: ParsedNote, pdfText?: string): Promise<GradeResult> {
 		const raw = await this.call(buildGradingPrompt(note, pdfText));
@@ -34,15 +29,27 @@ export class ClaudeService {
 	}
 
 	private async call(prompt: string): Promise<string> {
-		const message = await this.client.messages.create({
-			model: this.settings.claudeModel,
-			max_tokens: 2048,
-			messages: [{ role: "user", content: prompt }],
+		const model = this.settings.geminiModel;
+		const key = this.settings.geminiApiKey;
+		const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
+
+		const response = await fetch(url, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				contents: [{ parts: [{ text: prompt }] }],
+				generationConfig: { maxOutputTokens: 2048 },
+			}),
 		});
-		const block = message.content[0];
-		if (block.type !== "text") {
-			throw new Error("Unexpected response type from Claude.");
+
+		if (!response.ok) {
+			const err = await response.text();
+			throw new Error(`Gemini API error ${response.status}: ${err}`);
 		}
-		return block.text;
+
+		const data = await response.json() as {
+			candidates: Array<{ content: { parts: Array<{ text: string }> } }>;
+		};
+		return data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
 	}
 }

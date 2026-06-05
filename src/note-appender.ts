@@ -1,5 +1,5 @@
 import { App, TFile } from "obsidian";
-import type { ClaudeAnalysis, CorrectionsResult } from "./claude-service";
+import type { LLMAnalysis, CorrectionsResult } from "./llm-service";
 import type { NoteReviewSettings } from "./settings";
 import { parseSections } from "./settings";
 
@@ -8,7 +8,7 @@ export class NoteAppender {
 
 	async appendClaudeNotes(
 		file: TFile,
-		analysis: ClaudeAnalysis,
+		analysis: LLMAnalysis,
 		grade: number
 	): Promise<void> {
 		const section = this.buildClaudeNotesSection(analysis, grade);
@@ -25,7 +25,7 @@ export class NoteAppender {
 	}
 
 	private buildClaudeNotesSection(
-		analysis: ClaudeAnalysis,
+		analysis: LLMAnalysis,
 		grade: number
 	): string {
 		const sectionNames = parseSections(this.settings);

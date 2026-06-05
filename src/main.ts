@@ -6,7 +6,7 @@ import {
 	type NoteReviewSettings,
 } from "./settings";
 import { NoteParser } from "./note-parser";
-import { ClaudeService } from "./claude-service";
+import { createLLMService, validateProviderConfig, providerLabel } from "./llm-service";
 import { ZoteroService } from "./zotero-service";
 import { PDFExtractor } from "./pdf-extractor";
 import { probePDF, extractDigitalPDFText } from "./pdf-detector";
@@ -20,13 +20,13 @@ export default class NoteReviewPlugin extends Plugin {
 	async onload(): Promise<void> {
 		await this.loadSettings();
 
-		this.addRibbonIcon("book-open-check", "Review note with Claude", () => {
+		this.addRibbonIcon("book-open-check", "Review note", () => {
 			this.runReview();
 		});
 
 		this.addCommand({
 			id: "review-note",
-			name: "Review note with Claude",
+			name: "Review note",
 			callback: () => this.runReview(),
 		});
 
@@ -42,15 +42,14 @@ export default class NoteReviewPlugin extends Plugin {
 	}
 
 	private async runReview(): Promise<void> {
-		if (!this.settings.anthropicApiKey) {
-			new Notice(
-				"Note Review: Anthropic API key is not configured. Please add it in plugin settings.",
-				8000
-			);
+		const configError = validateProviderConfig(this.settings);
+		if (configError) {
+			new Notice(`Note Review: ${configError}`, 8000);
 			return;
 		}
 
-		const notice = new Notice("Note Review: Grading your notes…", 0);
+		const label = providerLabel(this.settings);
+		const notice = new Notice(`Note Review: Grading your notes…`, 0);
 
 		try {
 			const parser = new NoteParser(this.app);
@@ -74,13 +73,11 @@ export default class NoteReviewPlugin extends Plugin {
 					const probe = await probePDF(pdfPath);
 
 					if (probe.readability === "digital") {
-						// Born-digital PDF — extract text directly, no Python needed
 						notice.setMessage(
 							"Note Review: Extracting text from digital PDF…"
 						);
 						pdfText = await extractDigitalPDFText(pdfPath);
 					} else {
-						// Scanned PDF — route through Python OCR script
 						if (!this.settings.pdfScriptPath) {
 							throw new Error(
 								"PDF appears to be scanned (OCR required) but no extraction script is configured. " +
@@ -102,9 +99,9 @@ export default class NoteReviewPlugin extends Plugin {
 				}
 			}
 
-			notice.setMessage("Note Review: Asking Claude to grade your notes…");
-			const claudeSvc = new ClaudeService(this.settings);
-			const result = await claudeSvc.gradeNote(note, pdfText);
+			notice.setMessage(`Note Review: Asking ${label} to grade your notes…`);
+			const llmSvc = createLLMService(this.settings);
+			const result = await llmSvc.gradeNote(note, pdfText);
 
 			notice.hide();
 
@@ -117,7 +114,7 @@ export default class NoteReviewPlugin extends Plugin {
 					result,
 					note,
 					pdfText,
-					claudeSvc,
+					llmSvc,
 					zoteroSvc,
 					noteAppender
 				).open();
