@@ -15,7 +15,7 @@ export class ClaudeService {
 	private client: Anthropic;
 
 	constructor(private settings: NoteReviewSettings) {
-		this.client = new Anthropic({ apiKey: settings.anthropicApiKey });
+		this.client = new Anthropic({ apiKey: settings.anthropicApiKey, dangerouslyAllowBrowser: true });
 	}
 
 	async gradeNote(note: ParsedNote, pdfText?: string): Promise<GradeResult> {
