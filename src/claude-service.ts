@@ -15,11 +15,7 @@ export interface GradeResult {
 
 export interface ClaudeAnalysis {
 	summary: string;
-	core_claims: string;
-	methodology: string;
-	counter_arguments: string;
-	general_notes: string;
-	references: string;
+	sections: Record<string, string>;
 }
 
 export interface CorrectionsResult {
@@ -50,7 +46,7 @@ export class ClaudeService {
 	): Promise<ClaudeAnalysis> {
 		const prompt = this.buildAnalysisPrompt(note, pdfText);
 		const raw = await this.callClaude(prompt);
-		return this.parseAnalysis(raw);
+		return this.parseAnalysis(raw, note.sectionNames);
 	}
 
 	async generateCorrections(
@@ -81,22 +77,15 @@ export class ClaudeService {
 	}
 
 	private buildGradingPrompt(note: ParsedNote, pdfText?: string): string {
-		const sections = note.sections;
-		const studentNotes = [
-			`Core Claims:\n${sections["Core Claims"]}`,
-			`Methodology:\n${sections["Methodology"]}`,
-			`Counter Arguments:\n${sections["Counter Arguments"]}`,
-			`General Notes:\n${sections["General Notes"]}`,
-			`References:\n${sections["References"]}`,
-		].join("\n\n");
+		const studentNotes = note.sectionNames
+			.map((s) => `${s}:\n${note.sections[s]}`)
+			.join("\n\n");
 
 		let prompt = `You are grading a researcher's analysis of an academic source.\n\n`;
 		prompt += `[STUDENT NOTES]\n${studentNotes}\n\n`;
-
 		if (pdfText) {
 			prompt += `[PAPER TEXT]\n${pdfText}\n\n`;
 		}
-
 		prompt += `Grade this analysis 0–100 using these criteria:
   1. Main idea correctly identified      (0–25)
   2. Major points captured               (0–25)
@@ -118,72 +107,48 @@ Respond ONLY with valid JSON (no markdown fences, no other text):
 	}
 
 	private buildAnalysisPrompt(note: ParsedNote, pdfText?: string): string {
-		const sections = note.sections;
-		const studentNotes = [
-			`Core Claims:\n${sections["Core Claims"]}`,
-			`Methodology:\n${sections["Methodology"]}`,
-			`Counter Arguments:\n${sections["Counter Arguments"]}`,
-			`General Notes:\n${sections["General Notes"]}`,
-			`References:\n${sections["References"]}`,
-		].join("\n\n");
+		const studentNotes = note.sectionNames
+			.map((s) => `${s}:\n${note.sections[s]}`)
+			.join("\n\n");
 
-		let prompt = `You are an expert academic analyst. Read the following research notes and${pdfText ? " the paper text" : ""} and write a thorough analysis.\n\n`;
+		const sectionJson = note.sectionNames
+			.map((s) => `  "${toKey(s)}": "<your analysis of ${s}>"`)
+			.join(",\n");
+
+		let prompt = `You are an expert academic analyst. Read the following research notes${pdfText ? " and paper text" : ""} and write a thorough analysis.\n\n`;
 		prompt += `[STUDENT NOTES]\n${studentNotes}\n\n`;
 		if (pdfText) {
 			prompt += `[PAPER TEXT]\n${pdfText}\n\n`;
 		}
-
-		prompt += `Write a comprehensive analysis of this academic source. Respond ONLY with valid JSON (no markdown fences, no other text):
+		prompt += `Write a comprehensive analysis. Respond ONLY with valid JSON (no markdown fences, no other text):
 {
   "summary": "<2-4 sentence overview of the source>",
-  "core_claims": "<the paper's central arguments and claims>",
-  "methodology": "<research methods, design, sample, analysis approach>",
-  "counter_arguments": "<limitations, opposing views, critiques in or about the paper>",
-  "general_notes": "<notable insights, connections, implications>",
-  "references": "<key works cited by this paper that are worth tracking>"
+${sectionJson}
 }`;
 		return prompt;
 	}
 
 	private buildCorrectionsPrompt(note: ParsedNote, pdfText?: string): string {
-		const sections = note.sections;
-		const studentNotes = [
-			`Core Claims:\n${sections["Core Claims"]}`,
-			`Methodology:\n${sections["Methodology"]}`,
-			`Counter Arguments:\n${sections["Counter Arguments"]}`,
-			`General Notes:\n${sections["General Notes"]}`,
-			`References:\n${sections["References"]}`,
-		].join("\n\n");
+		const studentNotes = note.sectionNames
+			.map((s) => `${s}:\n${note.sections[s]}`)
+			.join("\n\n");
+
+		const sectionsJson = note.sectionNames
+			.map(
+				(s) =>
+					`    "${s}": {\n      "additions": [],\n      "corrections": []\n    }`
+			)
+			.join(",\n");
 
 		let prompt = `You are reviewing a researcher's notes for completeness and accuracy.\n\n`;
 		prompt += `[STUDENT NOTES]\n${studentNotes}\n\n`;
 		if (pdfText) {
 			prompt += `[PAPER TEXT]\n${pdfText}\n\n`;
 		}
-
-		prompt += `For each section, identify what the researcher missed and any errors. Use empty arrays when nothing is missing or wrong. Respond ONLY with valid JSON (no markdown fences, no other text):
+		prompt += `For each section, identify what the researcher missed and any errors. Lead missed points with "Missing: " and errors with "Error: ". Use empty arrays when nothing is wrong. Respond ONLY with valid JSON (no markdown fences, no other text):
 {
   "sections": {
-    "Core Claims": {
-      "additions": ["<item missed — lead with 'Missing: '>"],
-      "corrections": ["<error — lead with 'Error: '>"]
-    },
-    "Methodology": {
-      "additions": [],
-      "corrections": []
-    },
-    "Counter Arguments": {
-      "additions": [],
-      "corrections": []
-    },
-    "General Notes": {
-      "additions": [],
-      "corrections": []
-    },
-    "References": {
-      "additions": [],
-      "corrections": []
-    }
+${sectionsJson}
   }
 }`;
 		return prompt;
@@ -192,7 +157,6 @@ Respond ONLY with valid JSON (no markdown fences, no other text):
 	private parseGradeResult(raw: string): GradeResult {
 		const json = extractJson(raw);
 		const data = JSON.parse(json);
-
 		if (
 			typeof data.grade !== "number" ||
 			typeof data.feedback !== "string" ||
@@ -200,7 +164,6 @@ Respond ONLY with valid JSON (no markdown fences, no other text):
 		) {
 			throw new Error("Claude returned an unexpected grading format.");
 		}
-
 		return {
 			grade: Math.min(100, Math.max(0, Math.round(data.grade))),
 			feedback: data.feedback,
@@ -213,16 +176,16 @@ Respond ONLY with valid JSON (no markdown fences, no other text):
 		};
 	}
 
-	private parseAnalysis(raw: string): ClaudeAnalysis {
+	private parseAnalysis(raw: string, sectionNames: string[]): ClaudeAnalysis {
 		const json = extractJson(raw);
 		const data = JSON.parse(json);
+		const sections: Record<string, string> = {};
+		for (const name of sectionNames) {
+			sections[name] = String(data[toKey(name)] ?? "");
+		}
 		return {
 			summary: String(data.summary ?? ""),
-			core_claims: String(data.core_claims ?? ""),
-			methodology: String(data.methodology ?? ""),
-			counter_arguments: String(data.counter_arguments ?? ""),
-			general_notes: String(data.general_notes ?? ""),
-			references: String(data.references ?? ""),
+			sections,
 		};
 	}
 
@@ -247,4 +210,8 @@ function extractJson(raw: string): string {
 function clampScore(v: unknown): number {
 	const n = typeof v === "number" ? v : 0;
 	return Math.min(25, Math.max(0, Math.round(n)));
+}
+
+function toKey(sectionName: string): string {
+	return sectionName.toLowerCase().replace(/\s+/g, "_");
 }

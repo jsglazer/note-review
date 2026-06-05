@@ -110,7 +110,7 @@ export class GradeModal extends Modal {
 		if (!file || !(file instanceof TFile)) {
 			throw new Error("Active file is no longer available.");
 		}
-		await this.noteAppender.appendCorrections(file, corrections);
+		await this.noteAppender.appendCorrections(file, corrections, this.note.sectionNames);
 	}
 
 	onClose(): void {

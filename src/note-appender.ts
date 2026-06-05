@@ -1,7 +1,7 @@
 import { App, TFile } from "obsidian";
 import type { ClaudeAnalysis, CorrectionsResult } from "./claude-service";
 import type { NoteReviewSettings } from "./settings";
-import { REQUIRED_SECTIONS } from "./note-parser";
+import { parseSections } from "./settings";
 
 export class NoteAppender {
 	constructor(private app: App, private settings: NoteReviewSettings) {}
@@ -17,9 +17,10 @@ export class NoteAppender {
 
 	async appendCorrections(
 		file: TFile,
-		corrections: CorrectionsResult
+		corrections: CorrectionsResult,
+		sectionNames: string[]
 	): Promise<void> {
-		const section = this.buildCorrectionsSection(corrections);
+		const section = this.buildCorrectionsSection(corrections, sectionNames);
 		await this.appendToFile(file, section);
 	}
 
@@ -27,22 +28,21 @@ export class NoteAppender {
 		analysis: ClaudeAnalysis,
 		grade: number
 	): string {
-		const template = this.settings.claudeNoteFormat;
-		const filled = template
-			.replace("{{summary}}", analysis.summary)
-			.replace("{{core_claims}}", analysis.core_claims)
-			.replace("{{methodology}}", analysis.methodology)
-			.replace("{{counter_arguments}}", analysis.counter_arguments)
-			.replace("{{general_notes}}", analysis.general_notes)
-			.replace("{{references}}", analysis.references);
-
-		return `\n\n# Claude Notes\n**Grade:** ${grade}/100\n\n${filled}`;
+		const sectionNames = parseSections(this.settings);
+		let body = `### Summary\n${analysis.summary}\n\n`;
+		for (const name of sectionNames) {
+			body += `### ${name}\n${analysis.sections[name] ?? ""}\n\n`;
+		}
+		return `\n\n# Claude Notes\n**Grade:** ${grade}/100\n\n${body.trim()}`;
 	}
 
-	private buildCorrectionsSection(corrections: CorrectionsResult): string {
+	private buildCorrectionsSection(
+		corrections: CorrectionsResult,
+		sectionNames: string[]
+	): string {
 		const lines: string[] = ["\n\n# Claude Review\n"];
 
-		for (const section of REQUIRED_SECTIONS) {
+		for (const section of sectionNames) {
 			lines.push(`### ${section}`);
 			const data = corrections.sections?.[section];
 			const additions: string[] = Array.isArray(data?.additions)

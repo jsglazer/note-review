@@ -1,19 +1,10 @@
 import { App, TFile } from "obsidian";
 
-export const REQUIRED_SECTIONS = [
-	"Core Claims",
-	"Methodology",
-	"Counter Arguments",
-	"General Notes",
-	"References",
-] as const;
-
-export type SectionName = (typeof REQUIRED_SECTIONS)[number];
-
 export interface ParsedNote {
 	itemKey: string;
 	libraryId: string;
-	sections: Record<SectionName, string>;
+	sections: Record<string, string>;
+	sectionNames: string[];
 	fullBody: string;
 	raw: string;
 }
@@ -21,17 +12,25 @@ export interface ParsedNote {
 export class NoteParser {
 	constructor(private app: App) {}
 
-	async parseActiveNote(zoteroKeyField: string): Promise<ParsedNote> {
+	async parseActiveNote(
+		zoteroKeyField: string,
+		sectionNames: string[]
+	): Promise<ParsedNote> {
 		const file = this.app.workspace.getActiveFile();
 		if (!file) {
 			throw new Error("No active note is open.");
 		}
-		return this.parseFile(file, zoteroKeyField);
+		return this.parseFile(file, zoteroKeyField, sectionNames);
 	}
 
-	async parseFile(file: TFile, zoteroKeyField: string): Promise<ParsedNote> {
+	async parseFile(
+		file: TFile,
+		zoteroKeyField: string,
+		sectionNames: string[]
+	): Promise<ParsedNote> {
 		const raw = await this.app.vault.read(file);
-		const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter ?? {};
+		const frontmatter =
+			this.app.metadataCache.getFileCache(file)?.frontmatter ?? {};
 
 		const itemKey = String(frontmatter[zoteroKeyField] ?? "").trim();
 		if (!itemKey) {
@@ -42,9 +41,9 @@ export class NoteParser {
 		const libraryId = String(frontmatter["$libraryID"] ?? "").trim();
 
 		const body = this.stripFrontmatter(raw);
-		const sections = this.extractSections(body);
+		const sections = this.extractSections(body, sectionNames);
 
-		return { itemKey, libraryId, sections, fullBody: body, raw };
+		return { itemKey, libraryId, sections, sectionNames, fullBody: body, raw };
 	}
 
 	private stripFrontmatter(raw: string): string {
@@ -54,10 +53,13 @@ export class NoteParser {
 		return raw.slice(end + 4).trim();
 	}
 
-	private extractSections(body: string): Record<SectionName, string> {
-		const result = {} as Record<SectionName, string>;
+	private extractSections(
+		body: string,
+		sectionNames: string[]
+	): Record<string, string> {
+		const result: Record<string, string> = {};
 
-		for (const section of REQUIRED_SECTIONS) {
+		for (const section of sectionNames) {
 			const pattern = new RegExp(
 				`(?:^|\\n)#+\\s*${escapeRegex(section)}\\s*\\n([\\s\\S]*?)(?=\\n#+\\s|$)`,
 				"i"

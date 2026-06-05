@@ -2,6 +2,7 @@ import { Notice, Plugin } from "obsidian";
 import {
 	DEFAULT_SETTINGS,
 	NoteReviewSettingTab,
+	parseSections,
 	type NoteReviewSettings,
 } from "./settings";
 import { NoteParser } from "./note-parser";
@@ -52,7 +53,10 @@ export default class NoteReviewPlugin extends Plugin {
 
 		try {
 			const parser = new NoteParser(this.app);
-			const note = await parser.parseActiveNote(this.settings.zoteroKeyField);
+			const note = await parser.parseActiveNote(
+				this.settings.zoteroKeyField,
+				parseSections(this.settings)
+			);
 
 			let pdfText: string | undefined;
 			if (this.settings.gradingMode === "pdf-assisted") {

@@ -13,7 +13,15 @@ export interface NoteReviewSettings {
 	venvPath: string;
 	useOcr: boolean;
 	zoteroKeyField: string;
+	noteSections: string;
 	claudeNoteFormat: string;
+}
+
+export function parseSections(settings: NoteReviewSettings): string[] {
+	return settings.noteSections
+		.split(",")
+		.map((s) => s.trim())
+		.filter((s) => s.length > 0);
 }
 
 export const DEFAULT_SETTINGS: NoteReviewSettings = {
@@ -26,6 +34,7 @@ export const DEFAULT_SETTINGS: NoteReviewSettings = {
 	venvPath: "",
 	useOcr: true,
 	zoteroKeyField: "$itemKey",
+	noteSections: "Core Claims, Methodology, Counter Arguments, General Notes, References",
 	claudeNoteFormat: `### Summary
 {{summary}}
 
@@ -194,6 +203,26 @@ export class NoteReviewSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.zoteroKeyField = value.trim();
 						await this.plugin.saveSettings();
+					})
+			);
+
+		containerEl.createEl("h3", { text: "Note sections" });
+
+		new Setting(containerEl)
+			.setName("Note sections")
+			.setDesc(
+				"Comma-separated list of section headings the plugin expects in your notes. Edit this to match your own note format."
+			)
+			.addTextArea((area) =>
+				area
+					.setValue(this.plugin.settings.noteSections)
+					.onChange(async (value) => {
+						this.plugin.settings.noteSections = value;
+						await this.plugin.saveSettings();
+					})
+					.then((a) => {
+						a.inputEl.rows = 3;
+						a.inputEl.style.width = "100%";
 					})
 			);
 

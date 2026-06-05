@@ -14,8 +14,9 @@ An Obsidian plugin that grades your Zotero research notes using Claude and helps
 4. **If score ≥ threshold** — a modal shows your grade with four options:
    - **Stop** — close, nothing written
    - **Retry** — open the source item in Zotero to keep working
-   - **Claude Notes** — append Claude's own analysis of the paper (`# Claude Notes`)
-   - **Claude Review** — append a section listing what you missed or got wrong (`# Claude Review`)
+   - **Claude Notes** — append Claude's own full analysis of the paper (`# Claude Notes`): Summary, Core Claims, Methodology, Counter Arguments, General Notes, References
+   - **Claude Review** — *in addition to* Claude Notes (or on its own), appends a separate `# Claude Review` section listing what you missed or got wrong per section; your original text is never modified
+   - Both buttons are independent — you can click either, or both in sequence
 5. **If score < threshold** — "Do better!" with your score; OK opens the item in Zotero
 
 ## Requirements
@@ -40,10 +41,11 @@ An Obsidian plugin that grades your Zotero research notes using Claude and helps
 | Use OCR | on | Run Tesseract OCR (needed for scanned PDFs) |
 | Zotero key field | $itemKey | Frontmatter field with the Zotero item key |
 | Claude-note format | (template) | Template for the Claude Notes section |
+| Note sections | Core Claims, Methodology, Counter Arguments, General Notes, References | Comma-separated list of section headings the plugin expects in your notes |
 
 ## Note Format
 
-Notes must contain these sections (written by better-notes):
+The plugin looks for whatever section headings you configure in **Settings → Note sections**. The default set matches the better-notes template:
 
 ```
 ## Core Claims
@@ -53,7 +55,7 @@ Notes must contain these sections (written by better-notes):
 ## References
 ```
 
-The plugin shows an error if any section is missing.
+If your notes use different headings (e.g. `## Main Argument`, `## Methods`, `## Critique`), update the Note sections setting to match. The plugin shows an error if any configured section is missing from the active note.
 
 ## License
 

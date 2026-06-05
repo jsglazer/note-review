@@ -1,7 +1,7 @@
 {
   "id": "note-review",
   "name": "Note Review",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "minAppVersion": "1.0.0",
   "description": "Grade your Zotero-synced research notes with Claude and append AI analysis.",
   "author": "Josh Glazer",
