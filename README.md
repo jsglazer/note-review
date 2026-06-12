@@ -1,5 +1,9 @@
 # note-review
 
+[![CI](https://github.com/jsglazer/note-review/actions/workflows/ci.yml/badge.svg)](https://github.com/jsglazer/note-review/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/jsglazer/note-review/actions/workflows/codeql.yml/badge.svg)](https://github.com/jsglazer/note-review/actions/workflows/codeql.yml)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/jsglazer/note-review/badge)](https://securityscorecards.dev/viewer/?uri=github.com/jsglazer/note-review)
+
 An Obsidian plugin that grades your Zotero research notes using an AI language model and helps you improve your academic analysis. Supports Claude, OpenAI, Google Gemini, and local LLMs (Ollama, LM Studio).
 
 ## Workflow
