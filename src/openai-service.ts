@@ -1,6 +1,6 @@
-import type { NoteReviewSettings } from "./settings";
-import type { ParsedNote } from "./note-parser";
-import type { GradeResult, LLMAnalysis, CorrectionsResult } from "./llm-service";
+import type { NoteReviewSettings } from './settings';
+import type { ParsedNote } from './note-parser';
+import type { GradeResult, LLMAnalysis, CorrectionsResult } from './llm-service';
 import {
 	buildGradingPrompt,
 	buildAnalysisPrompt,
@@ -8,7 +8,7 @@ import {
 	parseGradeResult,
 	parseAnalysis,
 	parseCorrections,
-} from "./llm-prompts";
+} from './llm-prompts';
 
 export class OpenAIService {
 	constructor(private settings: NoteReviewSettings) {}
@@ -29,26 +29,22 @@ export class OpenAIService {
 	}
 
 	private async call(prompt: string): Promise<string> {
-		const isCompatible = this.settings.llmProvider === "openai-compatible";
+		const isCompatible = this.settings.llmProvider === 'openai-compatible';
 		const baseUrl = isCompatible
-			? this.settings.openaiCompatibleBaseUrl.replace(/\/+$/, "")
-			: "https://api.openai.com/v1";
-		const apiKey = isCompatible
-			? this.settings.openaiCompatibleApiKey
-			: this.settings.openaiApiKey;
-		const model = isCompatible
-			? this.settings.openaiCompatibleModel
-			: this.settings.openaiModel;
+			? this.settings.openaiCompatibleBaseUrl.replace(/\/+$/, '')
+			: 'https://api.openai.com/v1';
+		const apiKey = isCompatible ? this.settings.openaiCompatibleApiKey : this.settings.openaiApiKey;
+		const model = isCompatible ? this.settings.openaiCompatibleModel : this.settings.openaiModel;
 
-		const headers: Record<string, string> = { "Content-Type": "application/json" };
-		if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
+		const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+		if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
 
 		const response = await fetch(`${baseUrl}/chat/completions`, {
-			method: "POST",
+			method: 'POST',
 			headers,
 			body: JSON.stringify({
 				model,
-				messages: [{ role: "user", content: prompt }],
+				messages: [{ role: 'user', content: prompt }],
 				max_tokens: 2048,
 			}),
 		});
@@ -58,7 +54,7 @@ export class OpenAIService {
 			throw new Error(`OpenAI API error ${response.status}: ${err}`);
 		}
 
-		const data = await response.json() as { choices: Array<{ message: { content: string } }> };
-		return data.choices[0]?.message?.content ?? "";
+		const data = (await response.json()) as { choices: Array<{ message: { content: string } }> };
+		return data.choices[0]?.message?.content ?? '';
 	}
 }

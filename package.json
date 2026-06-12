@@ -1,47 +1,47 @@
 {
-  "name": "note-review",
-  "version": "1.0.4",
-  "description": "Obsidian plugin to grade Zotero-synced research notes with Claude",
-  "main": "main.js",
-  "scripts": {
-    "dev": "node esbuild.config.mjs",
-    "build": "tsc --noEmit --skipLibCheck && node esbuild.config.mjs production",
-    "check-types": "tsc --noEmit --skipLibCheck",
-    "lint": "eslint src",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
-  },
-  "keywords": [
-    "obsidian",
-    "zotero",
-    "claude",
-    "notes",
-    "review"
-  ],
-  "author": "Josh Glazer",
-  "license": "MIT",
-  "devDependencies": {
-    "@eslint/js": "^9.39.4",
-    "@eslint/json": "^0.14.0",
-    "@types/node": "^22.0.0",
-    "@types/pdf-parse": "^1.1.5",
-    "@vitest/coverage-v8": "^4.1.8",
-    "builtin-modules": "^5.2.0",
-    "esbuild": "^0.21.5",
-    "eslint": "^9.39.4",
-    "eslint-config-prettier": "^10.1.8",
-    "eslint-plugin-obsidianmd": "^0.3.0",
-    "obsidian": "latest",
-    "prettier": "^3.8.4",
-    "typescript": "^5.4.5",
-    "typescript-eslint": "^8.61.0",
-    "vitest": "^4.1.8"
-  },
-  "dependencies": {
-    "@anthropic-ai/sdk": "^0.30.0",
-    "pdf-parse": "^2.4.5"
-  }
+	"name": "note-review",
+	"version": "1.0.4",
+	"description": "Obsidian plugin to grade Zotero-synced research notes with Claude",
+	"main": "main.js",
+	"scripts": {
+		"dev": "node esbuild.config.mjs",
+		"build": "tsc --noEmit --skipLibCheck && node esbuild.config.mjs production",
+		"check-types": "tsc --noEmit --skipLibCheck",
+		"lint": "eslint src",
+		"format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+		"format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\"",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"test:coverage": "vitest run --coverage"
+	},
+	"keywords": [
+		"obsidian",
+		"zotero",
+		"claude",
+		"notes",
+		"review"
+	],
+	"author": "Josh Glazer",
+	"license": "MIT",
+	"devDependencies": {
+		"@eslint/js": "^9.39.4",
+		"@eslint/json": "^0.14.0",
+		"@types/node": "^22.0.0",
+		"@types/pdf-parse": "^1.1.5",
+		"@vitest/coverage-v8": "^4.1.8",
+		"builtin-modules": "^5.2.0",
+		"esbuild": "^0.21.5",
+		"eslint": "^9.39.4",
+		"eslint-config-prettier": "^10.1.8",
+		"eslint-plugin-obsidianmd": "^0.3.0",
+		"obsidian": "latest",
+		"prettier": "^3.8.4",
+		"typescript": "^5.4.5",
+		"typescript-eslint": "^8.61.0",
+		"vitest": "^4.1.8"
+	},
+	"dependencies": {
+		"@anthropic-ai/sdk": "^0.30.0",
+		"pdf-parse": "^2.4.5"
+	}
 }

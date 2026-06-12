@@ -1,10 +1,8 @@
-import type { ParsedNote } from "./note-parser";
-import type { GradeResult, LLMAnalysis, CorrectionsResult } from "./llm-service";
+import type { ParsedNote } from './note-parser';
+import type { GradeResult, LLMAnalysis, CorrectionsResult } from './llm-service';
 
 export function buildGradingPrompt(note: ParsedNote, pdfText?: string): string {
-	const studentNotes = note.sectionNames
-		.map((s) => `${s}:\n${note.sections[s]}`)
-		.join("\n\n");
+	const studentNotes = note.sectionNames.map((s) => `${s}:\n${note.sections[s]}`).join('\n\n');
 
 	let prompt = `You are grading a researcher's analysis of an academic source.\n\n`;
 	prompt += `[STUDENT NOTES]\n${studentNotes}\n\n`;
@@ -32,15 +30,13 @@ Respond ONLY with valid JSON (no markdown fences, no other text):
 }
 
 export function buildAnalysisPrompt(note: ParsedNote, pdfText?: string): string {
-	const studentNotes = note.sectionNames
-		.map((s) => `${s}:\n${note.sections[s]}`)
-		.join("\n\n");
+	const studentNotes = note.sectionNames.map((s) => `${s}:\n${note.sections[s]}`).join('\n\n');
 
 	const sectionJson = note.sectionNames
 		.map((s) => `  "${toKey(s)}": "<your analysis of ${s}>"`)
-		.join(",\n");
+		.join(',\n');
 
-	let prompt = `You are an expert academic analyst. Read the following research notes${pdfText ? " and paper text" : ""} and write a thorough analysis.\n\n`;
+	let prompt = `You are an expert academic analyst. Read the following research notes${pdfText ? ' and paper text' : ''} and write a thorough analysis.\n\n`;
 	prompt += `[STUDENT NOTES]\n${studentNotes}\n\n`;
 	if (pdfText) {
 		prompt += `[PAPER TEXT]\n${pdfText}\n\n`;
@@ -54,16 +50,11 @@ ${sectionJson}
 }
 
 export function buildCorrectionsPrompt(note: ParsedNote, pdfText?: string): string {
-	const studentNotes = note.sectionNames
-		.map((s) => `${s}:\n${note.sections[s]}`)
-		.join("\n\n");
+	const studentNotes = note.sectionNames.map((s) => `${s}:\n${note.sections[s]}`).join('\n\n');
 
 	const sectionsJson = note.sectionNames
-		.map(
-			(s) =>
-				`    "${s}": {\n      "additions": [],\n      "corrections": []\n    }`
-		)
-		.join(",\n");
+		.map((s) => `    "${s}": {\n      "additions": [],\n      "corrections": []\n    }`)
+		.join(',\n');
 
 	let prompt = `You are reviewing a researcher's notes for completeness and accuracy.\n\n`;
 	prompt += `[STUDENT NOTES]\n${studentNotes}\n\n`;
@@ -83,11 +74,11 @@ export function parseGradeResult(raw: string): GradeResult {
 	const json = extractJson(raw);
 	const data = JSON.parse(json);
 	if (
-		typeof data.grade !== "number" ||
-		typeof data.feedback !== "string" ||
-		typeof data.scores !== "object"
+		typeof data.grade !== 'number' ||
+		typeof data.feedback !== 'string' ||
+		typeof data.scores !== 'object'
 	) {
-		throw new Error("LLM returned an unexpected grading format.");
+		throw new Error('LLM returned an unexpected grading format.');
 	}
 	return {
 		grade: Math.min(100, Math.max(0, Math.round(data.grade))),
@@ -106,10 +97,10 @@ export function parseAnalysis(raw: string, sectionNames: string[]): LLMAnalysis 
 	const data = JSON.parse(json);
 	const sections: Record<string, string> = {};
 	for (const name of sectionNames) {
-		sections[name] = String(data[toKey(name)] ?? "");
+		sections[name] = String(data[toKey(name)] ?? '');
 	}
 	return {
-		summary: String(data.summary ?? ""),
+		summary: String(data.summary ?? ''),
 		sections,
 	};
 }
@@ -123,19 +114,19 @@ export function parseCorrections(raw: string): CorrectionsResult {
 export function extractJson(raw: string): string {
 	const fenceMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
 	if (fenceMatch) return fenceMatch[1].trim();
-	const braceStart = raw.indexOf("{");
-	const braceEnd = raw.lastIndexOf("}");
+	const braceStart = raw.indexOf('{');
+	const braceEnd = raw.lastIndexOf('}');
 	if (braceStart !== -1 && braceEnd !== -1) {
 		return raw.slice(braceStart, braceEnd + 1);
 	}
-	throw new Error("Could not extract JSON from LLM response.");
+	throw new Error('Could not extract JSON from LLM response.');
 }
 
 function clampScore(v: unknown): number {
-	const n = typeof v === "number" ? v : 0;
+	const n = typeof v === 'number' ? v : 0;
 	return Math.min(25, Math.max(0, Math.round(n)));
 }
 
 export function toKey(sectionName: string): string {
-	return sectionName.toLowerCase().replace(/\s+/g, "_");
+	return sectionName.toLowerCase().replace(/\s+/g, '_');
 }

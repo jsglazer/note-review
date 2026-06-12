@@ -1,6 +1,6 @@
-import type { NoteReviewSettings } from "./settings";
-import type { ParsedNote } from "./note-parser";
-import type { GradeResult, LLMAnalysis, CorrectionsResult } from "./llm-service";
+import type { NoteReviewSettings } from './settings';
+import type { ParsedNote } from './note-parser';
+import type { GradeResult, LLMAnalysis, CorrectionsResult } from './llm-service';
 import {
 	buildGradingPrompt,
 	buildAnalysisPrompt,
@@ -8,7 +8,7 @@ import {
 	parseGradeResult,
 	parseAnalysis,
 	parseCorrections,
-} from "./llm-prompts";
+} from './llm-prompts';
 
 export class GeminiService {
 	constructor(private settings: NoteReviewSettings) {}
@@ -34,8 +34,8 @@ export class GeminiService {
 		const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
 
 		const response = await fetch(url, {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({
 				contents: [{ parts: [{ text: prompt }] }],
 				generationConfig: { maxOutputTokens: 2048 },
@@ -47,9 +47,9 @@ export class GeminiService {
 			throw new Error(`Gemini API error ${response.status}: ${err}`);
 		}
 
-		const data = await response.json() as {
+		const data = (await response.json()) as {
 			candidates: Array<{ content: { parts: Array<{ text: string }> } }>;
 		};
-		return data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+		return data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
 	}
 }

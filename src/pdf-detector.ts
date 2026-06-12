@@ -1,10 +1,10 @@
-import { readFile } from "fs/promises";
-import { PDFParse } from "pdf-parse";
+import { readFile } from 'fs/promises';
+import { PDFParse } from 'pdf-parse';
 
 // Minimum average characters per page to consider a PDF born-digital (not needing OCR).
 const MIN_CHARS_PER_PAGE = 100;
 
-export type PDFReadability = "digital" | "scanned";
+export type PDFReadability = 'digital' | 'scanned';
 
 export interface PDFProbeResult {
 	readability: PDFReadability;
@@ -21,10 +21,9 @@ export async function probePDF(pdfPath: string): Promise<PDFProbeResult> {
 
 	const pageCount = result.total;
 	const pagesProbed = result.pages.length;
-	const charCount = result.text.replace(/\s+/g, "").length;
+	const charCount = result.text.replace(/\s+/g, '').length;
 	const avgCharsPerPage = pagesProbed > 0 ? charCount / pagesProbed : 0;
-	const readability: PDFReadability =
-		avgCharsPerPage >= MIN_CHARS_PER_PAGE ? "digital" : "scanned";
+	const readability: PDFReadability = avgCharsPerPage >= MIN_CHARS_PER_PAGE ? 'digital' : 'scanned';
 
 	return { readability, avgCharsPerPage, pageCount };
 }
